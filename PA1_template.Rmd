@@ -25,9 +25,9 @@ intervals <- activity[3]
 On examination, the data seems to be sufficiently structured that each day consists of a fixed number of intervals, and the days follow in chronological order. The number of intervals in a day, and number of days in the dataset are found as follows:
 
 ```{r, echo=TRUE, results='markup'}
-NUM_POINTS    = dim(activity)[1]
-NUM_INTERVALS = 24*60/5 # 24 hours x 60 minutes / 5 minutes
-NUM_DAYS      = NUM_POINTS/NUM_INTERVALS
+NUM_POINTS    <- dim(activity)[1]
+NUM_INTERVALS <- 24*60/5 # 24 hours x 60 minutes / 5 minutes
+NUM_DAYS      <- NUM_POINTS/NUM_INTERVALS
 print(sprintf('There are %d days, and %d intevals in a day.', 
               NUM_DAYS, NUM_INTERVALS))
 ```
@@ -39,10 +39,10 @@ First totaling the steps taken for each of the `r NUM_DAYS` days. Note that we a
 ```{r, echo=TRUE, results='markup'}
 num_steps = numeric( length = NUM_DAYS )
 for ( i in 1:NUM_DAYS ) {
-        index_start  = (i - 1)*NUM_INTERVALS + 1
-        index_end    = index_start + NUM_INTERVALS - 1
-        steps_in_day = steps[index_start:index_end, 1]
-        num_steps[i] = sum( steps_in_day, na.rm = TRUE )
+        index_start  <- (i - 1)*NUM_INTERVALS + 1
+        index_end    <- index_start + NUM_INTERVALS - 1
+        steps_in_day <- steps[index_start:index_end, 1]
+        num_steps[i] <- sum( steps_in_day, na.rm = TRUE )
 }
 num_steps
 ```
@@ -79,14 +79,14 @@ summary(num_steps)
 First we need to calculate the average number of steps taken, averaged across all days. We calculate the mean and median, and print them out per interval.
 
 ```{r, echo=TRUE, results='markup'}
-mean_steps_interval   = numeric( length = NUM_INTERVALS )
-median_steps_interval = numeric( length = NUM_INTERVALS )
+mean_steps_interval   <- numeric( length = NUM_INTERVALS )
+median_steps_interval <- numeric( length = NUM_INTERVALS )
 
 for ( i in 1:NUM_INTERVALS ) {
-        steps_interval = steps[ seq(i, NUM_POINTS, NUM_INTERVALS), 1 ]
-        mean_steps_interval[i] = 
+        steps_interval <- steps[ seq(i, NUM_POINTS, NUM_INTERVALS), 1 ]
+        mean_steps_interval[i] <- 
                 mean( steps_interval, na.rm = TRUE )
-        median_steps_interval[i] = 
+        median_steps_interval[i] <- 
                 median( steps_interval, na.rm = TRUE )
         print(sprintf('[Interval %04d] Mean = %f, Median = %f', 
                       intervals[i, 1],
@@ -126,8 +126,82 @@ print(sprintf(
 ```
 
 
-## Imputing missing values
+## Inputting missing values
 
+### Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
 
+Counting length of array while selecting NA entries:
+```{r, echo=TRUE, results='markup'}
+NUM_NA <- length(steps[is.na(steps)])
+NUM_NA
+```
+
+### Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+Assuming, the person associated with this data has a daily routine, it makes sense to arrive at a first estimate by replacing the NAs with the mean for that interval:
+
+```{r, echo=TRUE, results='markup'}
+steps_no_na <- steps
+for (i in 1:NUM_POINTS) { # loop through each datapoint
+        # calculate interval index 
+        j <- i %% NUM_INTERVALS
+        if (j == 0) {
+                j = NUM_INTERVALS
+        }
+        
+        # replace by mean if is.na
+        if ( is.na( steps[i, 1] ) ) {
+                steps_no_na [ i, 1 ] <- mean_steps_interval[j]         
+        }
+        
+        # print to verify
+        print(sprintf('%d [%04d] %04d %f', 
+                      i, intervals[i, 1],
+                      steps[i, 1], steps_no_na[i, 1] )
+              )
+}
+
+```
+
+### Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+First totaling the steps taken for each of the `r NUM_DAYS` days. Note that we are counting 'NA' steps as zero.
+
+```{r, echo=TRUE, results='markup'}
+num_steps_no_na = numeric( length = NUM_DAYS )
+for ( i in 1:NUM_DAYS ) {
+        index_start  <- (i - 1)*NUM_INTERVALS + 1
+        index_end    <- index_start + NUM_INTERVALS - 1
+        steps_in_day <- steps_no_na[index_start:index_end, 1]
+        num_steps_no_na[i] <- sum( steps_in_day, na.rm = FALSE )
+}
+num_steps_no_na
+```
+
+Now plotting this data into a histogram:
+
+```{r, echo=TRUE, results='markup'}
+hist(num_steps_no_na, 
+             breaks = seq(0, 25000, 1000),
+     xlab='total number of steps walked in a day',
+     main = "Histogram of total number of steps walked in a day\n (NA replaced by mean of interval)")
+```
+
+Re-plotting old histogram for comparison:
+```{r, echo=TRUE, results='markup'}
+hist(num_steps, 
+             breaks = seq(0, 25000, 1000),
+     xlab='total number of steps walked in a day',
+     main = "Histogram of total number of steps walked in a day\n (NA replaced by zero)")
+```
+
+Reporting summary of the number of steps by day, with and without NA data replaced by mean of that interval:
+
+```{r, echo=TRUE, results='markup'}
+summary(num_steps_no_na)
+summary(num_steps)
+```
+
+We can see that both the mean and median increased in value, when the NA data were replaced by mean of the interval. This is expected, as we are replacing zero values with positive values. A large number of rows were NA (`r NUM_NA` out of `r NUM_POINTS` data-points). Thus the effect is a significant shift in the frequency of steps close to zero, to close to the mean.
 
 ## Are there differences in activity patterns between weekdays and weekends?
